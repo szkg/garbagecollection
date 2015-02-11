@@ -1,7 +1,12 @@
 package szkg.processManager;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
+
 import szkg.algorithms.sort.ISorter;
 import szkg.algorithms.sort.SorterType;
 import szkg.algorithms.sort.ListType;
@@ -11,36 +16,53 @@ public class SortProcess {
 
 	public static void main(String[] args) {
 
-		SorterType sorterType = SorterType.values()[Integer.parseInt(args[0])];
-		ListType listType = ListType.values()[Integer.parseInt(args[1])];
-		int listSize = Integer.parseInt(args[2]);
-		int iterationCount = Integer.parseInt(args[3]);
+		try{
 
-		SorterFactory sorterFactory = new SorterFactory();
+			SorterType sorterType = SorterType.values()[Integer.parseInt(args[0])];
+			ListType listType = ListType.values()[Integer.parseInt(args[1])];
+			int listSize = Integer.parseInt(args[2]);
+			int iterationCount = Integer.parseInt(args[3]);
 
-		ISorter sorter = sorterFactory.CreateSorter(sorterType);
+			SorterFactory sorterFactory = new SorterFactory();
 
-		for (int iteration = 0; iteration < iterationCount; iteration++) {
+			ISorter sorter = sorterFactory.CreateSorter(sorterType);
 
-			switch (listType) {
-			case ArrayList:
+			for (int iteration = 0; iteration < iterationCount; iteration++) {
 
-				ArrayList<Integer> unsortedArrayList = sorterFactory.CreateWorstCaseArrayList(listSize, sorterType);
-				@SuppressWarnings("unused")
-				ArrayList<Integer> sortedArrayList = sorter.sort(unsortedArrayList);				
+				switch (listType) {
+				case ArrayList:
 
-				break;
+					ArrayList<Integer> unsortedArrayList = sorterFactory.CreateWorstCaseArrayList(listSize, sorterType);
+					@SuppressWarnings("unused")
+					ArrayList<Integer> sortedArrayList = sorter.sort(unsortedArrayList);				
 
-			case LinkedList:
+					break;
 
-				LinkedList<Integer> unsortedLinkedList = sorterFactory.CreateWorstCaseLinkedList(listSize, sorterType);
-				@SuppressWarnings("unused")
-				LinkedList<Integer> sortedLinkedList = sorter.sort(unsortedLinkedList);		
+				case LinkedList:
 
-				break;
-			default:
-				break;
+					LinkedList<Integer> unsortedLinkedList = sorterFactory.CreateWorstCaseLinkedList(listSize, sorterType);
+					@SuppressWarnings("unused")
+					LinkedList<Integer> sortedLinkedList = sorter.sort(unsortedLinkedList);		
 
+					break;
+				default:
+					break;
+
+				}
+			}
+		}
+		catch(Exception ex){
+			PrintWriter file;
+			
+			try {
+
+				file = new PrintWriter(new BufferedWriter(new FileWriter("Error.txt", true)));
+				file.println(String.format("%s", 				
+						ex.toString()
+						));
+				file.close();
+			} catch (IOException e) {				
+				e.printStackTrace();
 			}
 		}
 

@@ -12,8 +12,8 @@ public class MergeSort implements ISorter{
 		if(input.size() <= 1) return input;
 
 		int middle = input.size() / 2;
-		ArrayList<Integer> left = (ArrayList<Integer>) input.subList(0, middle);
-		ArrayList<Integer> right = (ArrayList<Integer>) input.subList(middle, input.size());
+		ArrayList<Integer> left = new ArrayList<Integer>(input.subList(0, middle));
+		ArrayList<Integer> right = new ArrayList<Integer>(input.subList(middle, input.size()));
 
 		right = sort(right);
 		left = sort(left);
@@ -57,13 +57,13 @@ public class MergeSort implements ISorter{
 		}
 		return result;
 	}
-	
+
 	public LinkedList<Integer> sort(LinkedList<Integer> input) {
 		if(input.size() <= 1) return input;
 
 		int middle = input.size() / 2;
-		LinkedList<Integer> left = (LinkedList<Integer>) input.subList(0, middle);
-		LinkedList<Integer> right = (LinkedList<Integer>) input.subList(middle, input.size());
+		LinkedList<Integer> left = new LinkedList<Integer>(input.subList(0, middle));
+		LinkedList<Integer> right = new LinkedList<Integer>(input.subList(middle, input.size()));
 
 		right = sort(right);
 		left = sort(left);
