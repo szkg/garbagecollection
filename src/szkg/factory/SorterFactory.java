@@ -2,6 +2,7 @@ package szkg.factory;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Random;
 
 import szkg.algorithms.sort.*;
 
@@ -36,6 +37,35 @@ public class SorterFactory {
 		return sorter;
 	}
 
+	public ArrayList<Integer> CreateRandomArrayList(int size){
+		
+		Random random = new Random();
+		
+		ArrayList<Integer> list = new ArrayList<Integer>(size);
+
+		for (int i = 0; i < size; i++) {			
+			list.add(new Integer(random.nextInt()));
+		}
+
+		return list;
+		
+	}
+	
+public LinkedList<Integer> CreateRandomLinkedList(int size){
+		
+		Random random = new Random();
+		
+		LinkedList<Integer> list = new LinkedList<Integer>();
+
+		for (int i = 0; i < size; i++) {			
+			list.add(new Integer(random.nextInt()));
+		}
+
+		return list;
+		
+	}
+	
+	
 	public ArrayList<Integer> CreateReverseSortedArrayList(int size){
 
 		ArrayList<Integer> list = new ArrayList<Integer>(size);

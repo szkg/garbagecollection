@@ -23,31 +23,19 @@ public class ProcessCreator {
 		runApplication(			
 				jarName,
 				"ConstantListSize.txt",
-				10,
-				
-				100,
-				200,
-				10,
-				
-				50000,
-				50000,
+				1000,
+
+				1,
+				1,
+				1,
+
+				10000000,
+				10000000,
 				1
 				);
 
 
-		runApplication(			
-				jarName,
-				"ConstantSortCount.txt",
-				10,
-				
-				150,
-				150,
-				10,
-				
-				10000,
-				100000,
-				10000
-				);
+
 	}
 
 	public static void runApplication(			
@@ -63,70 +51,79 @@ public class ProcessCreator {
 			) throws Exception 
 	{
 
-
-		for(int sortCount = sortCountStart; sortCount <= sortCountEnd; sortCount = sortCount + sortCountIncrement){
-			for(int listSize = listSizeStart; listSize <= listSizeEnd; listSize = listSize + listSizeIncrement){					
-
-				ArrayList<CollectionResult> collectionTimes = new ArrayList<CollectionResult>(4);
-
-				for(ListType listType : ListType.values()){						
-					for(SorterType algorithm : new SorterType[]{ SorterType.Merge, SorterType.Quick }){
-
-						Double minimumCollectionTime = Double.MAX_VALUE;
-						Double maximumCollectionTime = Double.MIN_VALUE;
-						Double totalCollectionTime = new Double(0);
-
-						for(int executionIteration = 0; executionIteration < executionIterationCount; executionIteration++){
+		String[] collectors = new String[]{
+				"UseSerialGC",
+				"UseParallelGC",
+				"UseG1GC"
+		};
 
 
-							String garbageLogFile = String.format("Logs%s%d_%d_%d_%d_%d.txt",
-									File.separator,
-									algorithm.getValue(),
-									listType.getValue(),
-									listSize,
-									sortCount,									
-									executionIteration);
+		for(int collectorIndex = 0; collectorIndex < collectors.length; collectorIndex++){
+			for(int executionIteration = 0; executionIteration < executionIterationCount; executionIteration++){
 
-							runProcess(
-									jarName,
-									garbageLogFile,
-									algorithm,
-									listType,
-									listSize,
-									sortCount,									
-									executionIteration									
-									);
+				for(int sortCount = sortCountStart; sortCount <= sortCountEnd; sortCount = sortCount + sortCountIncrement){
+					for(int listSize = listSizeStart; listSize <= listSizeEnd; listSize = listSize + listSizeIncrement){					
+
+						ArrayList<Double> collectionTimes = new ArrayList<Double>(4);
+						ArrayList<Double> executionTimes = new ArrayList<Double>(4);
+
+						for(ListType listType : ListType.values()){						
+							for(SorterType algorithm : new SorterType[]{ SorterType.Merge, SorterType.Quick }){
+
+								String garbageLogFile = String.format("Logs%s%d_%d_%d_%d_%d_%d.txt",
+										File.separator,
+										collectorIndex,
+										algorithm.getValue(),
+										listType.getValue(),
+										listSize,
+										sortCount,									
+										executionIteration);
+
+								String stopwatchFile = String.format("Logs%ss%d_%d_%d_%d_%d_%d.txt",										
+										File.separator,
+										collectorIndex,
+										algorithm.getValue(),
+										listType.getValue(),
+										listSize,
+										sortCount,									
+										executionIteration);							
+
+								runProcess(
+										jarName,
+										garbageLogFile,
+										stopwatchFile,
+										collectors[collectorIndex],
+										algorithm,
+										listType,
+										listSize,
+										sortCount,									
+										executionIteration									
+										);
 
 
-							Double collectionTimeofAnIteration = getCollectionTimeofAnIteration(garbageLogFile);
+								Double collectionTimeofAnIteration = getCollectionTimeofAnIteration(garbageLogFile);
 
-							if(collectionTimeofAnIteration > maximumCollectionTime)
-								maximumCollectionTime = collectionTimeofAnIteration;
+								collectionTimes.add(collectionTimeofAnIteration);
 
-							if(collectionTimeofAnIteration < minimumCollectionTime)
-								minimumCollectionTime = collectionTimeofAnIteration;
+								Double executionTimeofAnIteration = getExecutionTimeofAnIteration(stopwatchFile);
 
-							totalCollectionTime += collectionTimeofAnIteration;
+								executionTimes.add(executionTimeofAnIteration);
+							}						
+
 						}
 
-						CollectionResult collectionResult = new CollectionResult();
+						logResult(		
+								resultFile,
+								collectors[collectorIndex],
+								listSize,
+								sortCount,	
+								collectionTimes,
+								executionTimes
+								);
 
-						collectionResult.Average = totalCollectionTime / executionIterationCount;
-						collectionResult.Max = maximumCollectionTime;
-						collectionResult.Min = minimumCollectionTime;
-
-						collectionTimes.add(collectionResult);
 
 					}
 				}
-
-				logResult(		
-						resultFile,
-						listSize,
-						sortCount,	
-						collectionTimes
-						);
-
 			}
 		}
 	}
@@ -134,6 +131,8 @@ public class ProcessCreator {
 	public static void runProcess(
 			String jarName,
 			String garbageLogFile,
+			String stopWatchLogFile,
+			String collector,
 			SorterType algorithm,
 			ListType listType,
 			int listSize,
@@ -151,29 +150,23 @@ public class ProcessCreator {
 						listType.name(),
 						algorithm.name()));
 
-		Date startTime = new Date();							
+
 
 		Process process = Runtime.getRuntime().exec(String.format(
-				"java -Xloggc:%s -jar %s %d %d %d %d",
+				"java -Xloggc:%s -XX:+%s -jar %s %d %d %d %d %s",
 				garbageLogFile,
+				collector,
 				jarName,
 				algorithm.getValue(),
 				listType.getValue(),
 				listSize,
-				sortCount
+				sortCount,
+				stopWatchLogFile
 				));
 
 		process.waitFor();	
 
-		Date endTime = new Date();
 
-		long elapsedTime= endTime.getTime() - startTime.getTime();
-
-		System.out.println(
-				String.format(
-						"Process ended. elapsedTime: %d", 
-						elapsedTime											
-						));
 	}
 
 	public static Double getCollectionTimeofAnIteration (String garbageLogFile) throws Exception{
@@ -186,36 +179,47 @@ public class ProcessCreator {
 		}
 		br.close();
 
-		return collectionTimeofAnIteration;
+		return collectionTimeofAnIteration * 1000;
+	}
+
+	public static Double getExecutionTimeofAnIteration (String stopWatchLogFile) throws Exception{
+		Double executionTimeofAnIteration = 0.0;
+		BufferedReader br = new BufferedReader(new FileReader(stopWatchLogFile));
+		String line;
+		while ((line = br.readLine()) != null) {
+			executionTimeofAnIteration += Double.parseDouble(line);	 
+		}
+		br.close();
+
+		return executionTimeofAnIteration;
 	}
 
 	public static void logResult(	
 			String resultFile,
+			String collector,
 			int listSize,
 			int sortCount,	
-			ArrayList<CollectionResult> collectionTimes
+			ArrayList<Double> collectionTimes,
+			ArrayList<Double> executionTimes
 			) throws Exception {
 
-		PrintWriter file = new PrintWriter(new BufferedWriter(new FileWriter(resultFile, true)));
-		file.println(String.format("%d %d %f %f %f %f %f %f %f %f %f %f %f %f", 				
+		PrintWriter file = new PrintWriter(new BufferedWriter(new FileWriter(collector + "_" + resultFile, true)));
+		file.println(String.format("%d %d %f %f %f %f %f %f %f %f", 
+				
 				listSize,
 				sortCount,		
 
-				collectionTimes.get(0).Average,		
-				collectionTimes.get(0).Min,	
-				collectionTimes.get(0).Max,	
+				executionTimes.get(0),		
+				collectionTimes.get(0),	
 
-				collectionTimes.get(1).Average,
-				collectionTimes.get(1).Min,
-				collectionTimes.get(1).Max,
+				executionTimes.get(1),
+				collectionTimes.get(1),
 
-				collectionTimes.get(2).Average,
-				collectionTimes.get(2).Min,
-				collectionTimes.get(2).Max,
+				executionTimes.get(2),
+				collectionTimes.get(2),
 
-				collectionTimes.get(3).Average,
-				collectionTimes.get(3).Min,
-				collectionTimes.get(3).Max
+				executionTimes.get(3),
+				collectionTimes.get(3)
 				));
 
 		file.close();
