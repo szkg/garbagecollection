@@ -6,16 +6,15 @@ import szkg.algorithms.sort.ListType;
 import szkg.algorithms.sort.SorterType;
 import szkg.factory.SorterFactory;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
+import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 
 public class SortProcess {
 
-    private Logger logger = Logger.getLogger(ProcessCreator.class);
+    private Logger logger = Logger.getLogger(SortProcess.class);
 
 	public static void main(String[] args) {
 
@@ -59,6 +58,7 @@ public class SortProcess {
                     ArrayList<Integer> sortedArrayList = sorter.sort(unsortedArrayList);
                     endTime = new Date();
                     long elapsedTime = endTime.getTime() - startTime.getTime();
+
                     logElapsedTime(stopWatchLogFile, elapsedTime);
 
                 }
@@ -72,16 +72,40 @@ public class SortProcess {
                     LinkedList<Integer> sortedLinkedList = sorter.sort(unsortedLinkedList);
                     endTime = new Date();
                     long elapsedTime = endTime.getTime() - startTime.getTime();
+
                     logElapsedTime(stopWatchLogFile, elapsedTime);
 
                     break;
                 default:
+                    logger.debug("Default");
                     break;
 
             }
 
+
         } catch (Exception ex) {
-            logger.error("ProcessCreator Error", ex);
+            logger.error("SortProcess Error", ex);
+        }
+    }
+
+    private String getOwnPid() {
+        String pid = ManagementFactory.getRuntimeMXBean().getName();
+        pid = pid.split("@")[0];
+        return pid;
+    }
+
+    private void printVmPeak() throws Exception {
+        Runtime runtime = Runtime.getRuntime();
+        String[] commands = {"grep", "VmPeak", "/proc/" + getOwnPid() + "/status"};
+        Process process = null;
+
+        process = runtime.exec(commands);
+
+        BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        String s = null;
+        while ((s = stdInput.readLine()) != null) {
+            System.out.println(s);
         }
     }
 

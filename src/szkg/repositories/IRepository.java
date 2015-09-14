@@ -9,6 +9,7 @@ import szkg.algorithms.sort.SorterType;
 public interface IRepository {
     public void open() throws Exception;
 
-    public void addExecution(String collector, int listSize, SorterType algorithm, ListType listType, double collectionTime, double executionTime) throws Exception;
+    public void addExecution(int coreCount, String collector, int listSize, SorterType algorithm, ListType listType, double collectionTime, double executionTime, int collectedGarbage, int peakHeapSize) throws Exception;
 
+    public void exportToScript() throws Exception;
 }

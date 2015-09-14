@@ -3,11 +3,11 @@ package szkg.processManager;
 import org.apache.log4j.Logger;
 import szkg.algorithms.sort.ListType;
 import szkg.algorithms.sort.SorterType;
+import szkg.models.GarbageCollectionResult;
 import szkg.repositories.H2Repository;
 import szkg.repositories.IRepository;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 
@@ -26,9 +26,9 @@ public class ProcessCreator {
         try {
             logger.debug("ProcessCreator Started");
 
-            String jarName = args[0];
+            String jarName = "SortProcess.jar";
 
-            runApplication(jarName, 10000000, 10000000, 1);
+            runApplication(jarName, 100000, 2000000, 100000);
         } catch (Exception ex) {
             logger.error("ProcessCreator Error", ex);
         } finally {
@@ -43,13 +43,15 @@ public class ProcessCreator {
             int listSizeIncrement
     ) throws Exception {
 
+        int cores = Runtime.getRuntime().availableProcessors();
+
         String[] collectors = new String[]{
                 "UseSerialGC",
                 "UseParallelGC",
                 "UseG1GC"
         };
 
-        int iterationCount = 100;
+        int iterationCount = 5;
 
         repository.open();
 
@@ -57,13 +59,13 @@ public class ProcessCreator {
         for (int iterationIndex = 0; iterationIndex < iterationCount; iterationIndex++) {
             for (String collector : collectors) {
                 for (int listSize = listSizeStart; listSize <= listSizeEnd; listSize = listSize + listSizeIncrement) {
-                    for (ListType listType : ListType.values()) {
-                        for (SorterType algorithm : new SorterType[]{SorterType.Merge, SorterType.Quick}) {
+                    for (ListType listType : new ListType[]{ListType.ArrayList, ListType.LinkedList}) {
+                        for (SorterType algorithm : new SorterType[]{SorterType.Quick, SorterType.Merge}) {
 
-                            try {
+                            //try {
 
-                                String garbageLogFile = String.format("%d.txt", fileIndex++);
-                                String stopwatchFile = String.format("%d.txt", fileIndex++);
+                            String garbageLogFile = String.format("Logs/g_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
+                            String stopwatchFile = String.format("Logs/s_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
 
                                 runProcess(
                                         jarName,
@@ -75,17 +77,22 @@ public class ProcessCreator {
                                         listSize
                                 );
 
-                                Double collectionTimeofAnIteration = getCollectionTimeofAnIteration(garbageLogFile);
+                            GarbageCollectionResult garbageCollectionResult = getCollectionResultofAnIteration(garbageLogFile);
                                 Double executionTimeofAnIteration = getExecutionTimeofAnIteration(stopwatchFile);
 
-                                repository.addExecution(collector, listSize, algorithm, listType, collectionTimeofAnIteration, executionTimeofAnIteration);
+                            repository.addExecution(cores,
+                                    collector, listSize, algorithm,
+                                    listType, garbageCollectionResult.collectionTime,
+                                    executionTimeofAnIteration,
+                                    garbageCollectionResult.collectedGarbage,
+                                    garbageCollectionResult.peakHeapSize);
 
-                                new File(garbageLogFile).delete();
-                                new File(stopwatchFile).delete();
+//                                new File(garbageLogFile).delete();
+//                                new File(stopwatchFile).delete();
 
-                            } catch (Exception ex) {
-                                logger.error("ProcessCreator Error", ex);
-                            }
+                            //} catch (Exception ex) {
+                            //    logger.error("ProcessCreator Error", ex);
+                            //}
                         }
                     }
                 }
@@ -126,22 +133,45 @@ public class ProcessCreator {
         process.waitFor();
     }
 
-    public Double getCollectionTimeofAnIteration(String garbageLogFile) throws Exception {
-        Double collectionTimeofAnIteration = 0.0;
+    public GarbageCollectionResult getCollectionResultofAnIteration(String garbageLogFile) throws Exception {
+
+        GarbageCollectionResult result = new GarbageCollectionResult();
 
         ArrayList<String> lines = readAllLines(garbageLogFile);
         for (String line : lines) {
-            int secsIndex = line.indexOf(" secs");
+            if (line.contains(" secs") && line.contains("->")) {
 
-            if (secsIndex > -1) {
-                int timeStartIndex = secsIndex - 10;
-                String timeString = line.substring(timeStartIndex, timeStartIndex + 9);
-                Double collectionTime = Double.parseDouble(timeString);
-                collectionTimeofAnIteration += collectionTime;
+                String[] allParts = line.split("->");
+                String[] initialParts = allParts[0].split(" ");
+
+                int initialHeapSize = getSizeInKBytes(initialParts[initialParts.length - 1]);
+                String[] timeParts = allParts[1].split("\\(|\\)| ");
+
+                result.collectionTime += Double.parseDouble(timeParts[3]) * 1000;
+
+                int resultHeapSize = getSizeInKBytes(timeParts[0]);
+
+                if (initialHeapSize > result.peakHeapSize)
+                    result.peakHeapSize = initialHeapSize;
+
+                result.collectedGarbage += initialHeapSize - resultHeapSize;
             }
         }
 
-        return collectionTimeofAnIteration * 1000;
+        return result;
+    }
+
+    public int getSizeInKBytes(String value) {
+
+        String metric = value.substring(value.length() - 1);
+        value = value.substring(0, value.length() - 1);
+
+        int size = Integer.parseInt(value);
+
+        if (metric.equals("M"))
+            size *= 1024;
+
+        return size;
     }
 
     public Double getExecutionTimeofAnIteration(String stopWatchLogFile) throws Exception {
@@ -168,5 +198,7 @@ public class ProcessCreator {
         bufferedReader.close();
         return lines;
     }
+
+
 }
 
