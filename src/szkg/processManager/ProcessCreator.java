@@ -4,8 +4,8 @@ import org.apache.log4j.Logger;
 import szkg.algorithms.sort.ListType;
 import szkg.algorithms.sort.SorterType;
 import szkg.models.GarbageCollectionResult;
-import szkg.repositories.H2Repository;
 import szkg.repositories.IRepository;
+import szkg.repositories.SqliteRepository;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 public class ProcessCreator {
 
     private Logger logger = Logger.getLogger(ProcessCreator.class);
-    private IRepository repository = new H2Repository();
+    private IRepository repository = new SqliteRepository();
 
     public static void main(String[] args) {
         new ProcessCreator().run(args);
@@ -28,7 +28,7 @@ public class ProcessCreator {
 
             String jarName = "SortProcess.jar";
 
-            runApplication(jarName, 100000, 2000000, 100000);
+            runApplication(jarName, 1000000, 5000000, 1000000);
         } catch (Exception ex) {
             logger.error("ProcessCreator Error", ex);
         } finally {
@@ -44,6 +44,7 @@ public class ProcessCreator {
     ) throws Exception {
 
         int cores = Runtime.getRuntime().availableProcessors();
+        String jdkVersion = System.getProperty("java.version");
 
         String[] collectors = new String[]{
                 "UseSerialGC",
@@ -51,21 +52,27 @@ public class ProcessCreator {
                 "UseG1GC"
         };
 
-        int iterationCount = 5;
+        int iterationCount = 10;
 
         repository.open();
 
         int fileIndex = 0;
+
         for (int iterationIndex = 0; iterationIndex < iterationCount; iterationIndex++) {
             for (String collector : collectors) {
                 for (int listSize = listSizeStart; listSize <= listSizeEnd; listSize = listSize + listSizeIncrement) {
-                    for (ListType listType : new ListType[]{ListType.ArrayList, ListType.LinkedList}) {
-                        for (SorterType algorithm : new SorterType[]{SorterType.Quick, SorterType.Merge}) {
+                    for (SorterType algorithm : new SorterType[]{SorterType.Quick, SorterType.Merge}) {
+                        for (ListType listType : new ListType[]{ListType.ArrayList, ListType.LinkedList}) {
 
-                            //try {
+                            try {
 
-                            String garbageLogFile = String.format("Logs/g_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
-                            String stopwatchFile = String.format("Logs/s_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
+                                String garbageLogFile = String.format("Logs/g_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
+                                String stopwatchFile = String.format("Logs/s_%d_%s_%d_%d_%d.txt", iterationIndex, collector, listSize, listType.getValue(), algorithm.getValue());
+
+                                logger.debug(
+                                        String.format(
+                                                "Process started. Parameters: iteration: %d, collector: %s, listSize: %d, listType: %s, algorithm: %s",
+                                                iterationIndex, collector, listSize, listType.name(), algorithm.name()));
 
                                 runProcess(
                                         jarName,
@@ -77,22 +84,20 @@ public class ProcessCreator {
                                         listSize
                                 );
 
-                            GarbageCollectionResult garbageCollectionResult = getCollectionResultofAnIteration(garbageLogFile);
+                                GarbageCollectionResult garbageCollectionResult = getCollectionResultofAnIteration(garbageLogFile);
                                 Double executionTimeofAnIteration = getExecutionTimeofAnIteration(stopwatchFile);
 
-                            repository.addExecution(cores,
-                                    collector, listSize, algorithm,
-                                    listType, garbageCollectionResult.collectionTime,
-                                    executionTimeofAnIteration,
-                                    garbageCollectionResult.collectedGarbage,
-                                    garbageCollectionResult.peakHeapSize);
+                                repository.addSortingExecution(cores,
+                                        collector, listSize, algorithm,
+                                        listType, garbageCollectionResult.collectionTime,
+                                        executionTimeofAnIteration,
+                                        garbageCollectionResult.collectedGarbage,
+                                        garbageCollectionResult.peakHeapSize,
+                                        jdkVersion);
 
-//                                new File(garbageLogFile).delete();
-//                                new File(stopwatchFile).delete();
-
-                            //} catch (Exception ex) {
-                            //    logger.error("ProcessCreator Error", ex);
-                            //}
+                            } catch (Exception ex) {
+                                logger.error("Sort Error", ex);
+                            }
                         }
                     }
                 }
@@ -112,15 +117,8 @@ public class ProcessCreator {
 
         Thread.sleep(1000);
 
-        logger.debug(
-                String.format(
-                        "Process started. Parameters: listSize: %d, listType: %s, algorithm: %s",
-                        listSize,
-                        listType.name(),
-                        algorithm.name()));
-
         Process process = Runtime.getRuntime().exec(String.format(
-                "java -Xloggc:%s -XX:+%s -jar %s %s %d %d %d",
+                "java -Xms1024m -Xmx1024m -Xloggc:%s -XX:+%s -jar %s %s %d %d %d",
                 garbageLogFile,
                 collector,
                 jarName,

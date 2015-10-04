@@ -11,14 +11,14 @@ import java.sql.PreparedStatement;
 /**
  * Created by Gencay on 21.06.2015.
  */
-public class H2Repository implements IRepository {
+public class SqliteRepository implements IRepository {
 
-    private Logger logger = Logger.getLogger(H2Repository.class);
+    private Logger logger = Logger.getLogger(SqliteRepository.class);
     private Connection connection;
 
     private void openConnection() throws Exception {
-        Class.forName("org.h2.Driver");
-        connection = DriverManager.getConnection("jdbc:h2:GarbageCollection", "sa", "");
+        Class.forName("org.sqlite.JDBC");
+        connection = DriverManager.getConnection("jdbc:sqlite:GarbageCollection.sqlite");
     }
 
     private void closeConnection() throws Exception {
@@ -29,20 +29,19 @@ public class H2Repository implements IRepository {
 
         openConnection();
 
-        String createTableSql = "CREATE TABLE IF NOT EXISTS SORTINGEXECUTIONS(\n" +
-                "ID INT PRIMARY KEY AUTO_INCREMENT,\n" +
-                "COLLECTOR VARCHAR(50),\n" +
-                "CORECOUNT INT,\n" +
-                "LISTSIZE INT,\n" +
-                "ALGORITHM INT,\n" +
-                "LISTTYPE INT,\n" +
-                "COLLECTIONTIME DOUBLE,\n" +
-                "EXECUTIONTIME DOUBLE,\n" +
-                "COLLECTEDGARBAGE INT,\n" +
-                "PEAKHEAPSIZE INT,\n" +
-                "JDKVERSION VARCHAR(50),\n" +
-                "CREATEDATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP()\n" +
-                ");";
+        String createTableSql = "CREATE  TABLE  IF NOT EXISTS \"main\".\"SortingExecutions\" " +
+                "(\"Id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , " +
+                "\"Collector\" VARCHAR NOT NULL , " +
+                "\"CoreCount\" INTEGER NOT NULL , " +
+                "\"ListSize\" INTEGER NOT NULL , " +
+                "\"Algorithm\" INTEGER NOT NULL , " +
+                "\"ListType\" INTEGER NOT NULL , " +
+                "\"CollectionTime\" DOUBLE NOT NULL , " +
+                "\"ExecutionTime\" DOUBLE NOT NULL , " +
+                "\"CollectedGarbage\" INTEGER NOT NULL , " +
+                "\"PeakHeapSize\" INTEGER NOT NULL , " +
+                "\"JdkVersion\" VARCHAR NOT NULL , " +
+                "\"CreateDate\" DATETIME NOT NULL DEFAULT CURRENT_DATE)";
 
         PreparedStatement createTableStatement = connection.prepareStatement(createTableSql);
         createTableStatement.execute();
@@ -55,18 +54,20 @@ public class H2Repository implements IRepository {
 
         openConnection();
 
-        String createTableSql = "CREATE TABLE IF NOT EXISTS DECAPOXECUTIONS(\n" +
-                "ID INT PRIMARY KEY AUTO_INCREMENT,\n" +
-                "COLLECTOR VARCHAR(50),\n" +
-                "BENCHMARK VARCHAR(50),\n" +
-                "CORECOUNT INT,\n" +
-                "COLLECTIONTIME DOUBLE,\n" +
-                "EXECUTIONTIME DOUBLE,\n" +
-                "COLLECTEDGARBAGE INT,\n" +
-                "PEAKHEAPSIZE INT,\n" +
-                "JDKVERSION VARCHAR(50),\n" +
-                "CREATEDATE TIMESTAMP DEFAULT CURRENT_TIMESTAMP()\n" +
-                ");";
+        String createTableSql = "CREATE  TABLE  IF NOT EXISTS \"main\".\"SortingExecutions\" " +
+                "(\"Id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , " +
+                "\"Collector\" VARCHAR NOT NULL , " +
+                "\"Benchmark\" VARCHAR NOT NULL , " +
+                "\"CoreCount\" INTEGER NOT NULL , " +
+                "\"ListSize\" INTEGER NOT NULL , " +
+                "\"Algorithm\" INTEGER NOT NULL , " +
+                "\"ListType\" INTEGER NOT NULL , " +
+                "\"CollectionTime\" DOUBLE NOT NULL , " +
+                "\"ExecutionTime\" DOUBLE NOT NULL , " +
+                "\"CollectedGarbage\" INTEGER NOT NULL , " +
+                "\"PeakHeapSize\" INTEGER NOT NULL , " +
+                "\"JdkVersion\" VARCHAR NOT NULL , " +
+                "\"CreateDate\" DATETIME NOT NULL DEFAULT CURRENT_DATE)";
 
         PreparedStatement createTableStatement = connection.prepareStatement(createTableSql);
         createTableStatement.execute();
@@ -86,8 +87,8 @@ public class H2Repository implements IRepository {
 
         openConnection();
 
-        String addExecutionSql = "INSERT INTO SORTINGEXECUTIONS " +
-                "(COLLECTOR , LISTSIZE, ALGORITHM , LISTTYPE , COLLECTIONTIME , EXECUTIONTIME, COLLECTEDGARBAGE, PEAKHEAPSIZE, CORECOUNT, JDKVERSION)" +
+        String addExecutionSql = "INSERT INTO SortingExecutions " +
+                "(Collector , ListSize, Algorithm , ListType , CollectionTime , ExecutionTime, CollectedGarbage, PeakHeapSize, CoreCount, JdkVersion)" +
                 " VALUES (?,?,?,?,?,?,?,?,?,?)";
 
         PreparedStatement addExecutionStatement = connection.prepareStatement(addExecutionSql);
@@ -105,6 +106,7 @@ public class H2Repository implements IRepository {
         addExecutionStatement.setInt(9, coreCount);
         addExecutionStatement.setString(10, jdkVersion);
 
+
         addExecutionStatement.execute();
         addExecutionStatement.close();
 
@@ -116,9 +118,9 @@ public class H2Repository implements IRepository {
 
         openConnection();
 
-        String addExecutionSql = "INSERT INTO DECAPOEXECUTIONS " +
-                "(COLLECTOR, COLLECTIONTIME , EXECUTIONTIME, COLLECTEDGARBAGE, PEAKHEAPSIZE, CORECOUNT, JDKVERSION, BENCHMARK)" +
-                " VALUES (?,?,?,?,?,?,?)";
+        String addExecutionSql = "INSERT INTO SortingExecutions " +
+                "(Collector , CollectionTime , ExecutionTime, CollectedGarbage, PeakHeapSize, CoreCount, JdkVersion, Benchmark)" +
+                " VALUES (?,?,?,?,?,?,?,?)";
 
         PreparedStatement addExecutionStatement = connection.prepareStatement(addExecutionSql);
 
